@@ -24,12 +24,7 @@ from __future__ import absolute_import
 import argparse
 import logging
 import re
-
-from past.builtins import unicode
-
 import apache_beam as beam
-from apache_beam.io import ReadFromText
-from apache_beam.io import WriteToText
 from apache_beam.options.pipeline_options import PipelineOptions
 from apache_beam.options.pipeline_options import SetupOptions
 
@@ -45,11 +40,11 @@ g_schema = {
     }, {
         'name': 'AllocationPct', 'type': 'DECIMAL', 'mode': 'NULLABLE'
     }, {
-        'name': 'InitialCapacity', 'type': 'INT64', 'mode': 'NULLABLE'
+        'name': 'InitialCapacity_MWh', 'type': 'INT64', 'mode': 'NULLABLE'
     }, {
-        'name': 'ExpectedElectricityCertCapacity', 'type': 'INT64', 'mode': 'NULLABLE'
+        'name': 'ExpectedElectricityCertCapacity_MWh', 'type': 'DECIMAL', 'mode': 'NULLABLE'
     }, {
-        'name': 'InstalledCapacity', 'type': 'DECIMAL', 'mode': 'NULLABLE'
+        'name': 'InstalledCapacity_kW', 'type': 'DECIMAL', 'mode': 'NULLABLE'
     }, {
         'name': 'EnergySource', 'type': 'STRING', 'mode': 'NULLABLE'
     }, {
@@ -62,11 +57,8 @@ g_schema = {
         'name': 'ExpiryDate', 'type': 'DATE', 'mode': 'NULLABLE'
     }, {
         'name': 'StartDatePeriod', 'type': 'STRING', 'mode': 'NULLABLE'
-    }]}
-""",, {
-        'name': 'LastCol', 'type': 'STRING', 'mode': 'NULLABLE'
     }, {
-        'name': 'Decision', 'type': 'STRING', 'mode': 'NULLABLE'
+        'name': 'DecisionType', 'type': 'STRING', 'mode': 'NULLABLE'
     }, {
         'name': 'NumOfUnits', 'type': 'INT64', 'mode': 'NULLABLE'
     }, {
@@ -78,7 +70,7 @@ g_schema = {
     }, {
         'name': 'Watercourses', 'type': 'STRING', 'mode': 'NULLABLE'
     }]
-}"""
+}
 
 
 class DataIngestion:
@@ -106,7 +98,7 @@ class DataIngestion:
                 'created_date': '11/28/2016'
             }
          """
-        logging.info("DataIngestion.parse_method(...) started")
+        logging.debug("DataIngestion.parse_method(...) started")
         data_schema = {
             'fields': [{
                 'name': 'SiteName', 'type': 'STRING', 'mode': 'NULLABLE'
@@ -119,11 +111,11 @@ class DataIngestion:
             }, {
                 'name': 'AllocationPct', 'type': 'DECIMAL', 'mode': 'NULLABLE'
             }, {
-                'name': 'InitialCapacity', 'type': 'INT64', 'mode': 'NULLABLE'
+                'name': 'InitialCapacity_MWh', 'type': 'INT64', 'mode': 'NULLABLE'
             }, {
-                'name': 'ExpectedElectricityCertCapacity', 'type': 'INT64', 'mode': 'NULLABLE'
+                'name': 'ExpectedElectricityCertCapacity_MWh', 'type': 'DECIMAL', 'mode': 'NULLABLE'
             }, {
-                'name': 'InstalledCapacity', 'type': 'DECIMAL', 'mode': 'NULLABLE'
+                'name': 'InstalledCapacity_kW', 'type': 'DECIMAL', 'mode': 'NULLABLE'
             }, {
                 'name': 'EnergySource', 'type': 'STRING', 'mode': 'NULLABLE'
             }, {
@@ -136,26 +128,23 @@ class DataIngestion:
                 'name': 'ExpiryDate', 'type': 'DATE', 'mode': 'NULLABLE'
             }, {
                 'name': 'StartDatePeriod', 'type': 'STRING', 'mode': 'NULLABLE'
-            }]}
-        """, {
-            'name': 'LastCol', 'type': 'STRING', 'mode': 'NULLABLE'
-        }, {
-            'name': 'Decision', 'type': 'STRING', 'mode': 'NULLABLE'
-        }, {
-            'name': 'NumOfUnits', 'type': 'INT64', 'mode': 'NULLABLE'
-        }, {
-            'name': 'Town', 'type': 'STRING', 'mode': 'NULLABLE'
-        }, {
-            'name': 'City', 'type': 'STRING', 'mode': 'NULLABLE'
-        }, {
-            'name': 'County', 'type': 'STRING', 'mode': 'NULLABLE'
-        }, {
-            'name': 'Watercourses', 'type': 'STRING', 'mode': 'NULLABLE'
-        }]
-        }"""
+            }, {
+                'name': 'DecisionType', 'type': 'STRING', 'mode': 'NULLABLE'
+            }, {
+                'name': 'NumOfUnits', 'type': 'INT64', 'mode': 'NULLABLE'
+            }, {
+                'name': 'Town', 'type': 'STRING', 'mode': 'NULLABLE'
+            }, {
+                'name': 'City', 'type': 'STRING', 'mode': 'NULLABLE'
+            }, {
+                'name': 'County', 'type': 'STRING', 'mode': 'NULLABLE'
+            }, {
+                'name': 'Watercourses', 'type': 'STRING', 'mode': 'NULLABLE'
+            }]
+        }
 
         # Strip out carriage return, newline and quote characters.
-        values = re.split(",", re.sub('\r\n', '', re.sub('"', '',
+        values = re.split(";", re.sub('\r\n', '', re.sub('"', '',
                                                          string_input)))
         cols = []
         scehma_fields = data_schema['fields']
@@ -163,7 +152,7 @@ class DataIngestion:
         row = dict(
             zip(cols,
                 values))
-        logging.info("DataIngestion.parse_method(...): {}".format(row))
+        logging.debug("DataIngestion.parse_method(...): {}".format(row))
         return row
 
 
@@ -221,7 +210,6 @@ def run(argv=None, save_main_session=True):
                     # Deletes all data in the BigQuery table before writing.
                     write_disposition=beam.io.BigQueryDisposition.WRITE_TRUNCATE)))
     p.run().wait_until_finish()
-
 
 
 if __name__ == '__main__':
